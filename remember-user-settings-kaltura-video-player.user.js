@@ -5,48 +5,89 @@
 // @version       0.1.0
 // @match         *://canvasgatechtest.kaf.kaltura.com/*
 // @match         *://cdnapisec.kaltura.com/*
+// @match         *://gatech.instructure.com/courses/*
 // @grant         none
 // @author        Emily Reese
 // @description   1/16/2020, 11:29:39 AM
 // ==/UserScript==
 
-kWidget.addReadyCallback(playerId => {
-  let kdp = document.getElementById(playerId);
-  kdp.kBind("playerReady", function() {
-    applyExistingSettings(kdp);
-    createListeners(kdp);
-  });
-});
+(function() {
+    'use strict';
 
-function createListeners(player) {
-  player.kBind("changedClosedCaptions", event => {
-    event.language
-      ? localStorage.setItem("captionLanguage", event.language)
-      : localStorage.removeItem("captionLanguage");
-  });
+    /* more details and docs on player: http://player.kaltura.com/docs/api
+    */
+    var waitForKWidgetCount = 0;
 
-  player.kBind("updatedPlaybackRate", newRate => {
-    localStorage.setItem("playbackRate", newRate);
-  });
+    function waitForKWidget( callback ) {
+        waitForKWidgetCount++;
+        if( waitForKWidgetCount > 200 ){
+            if( console ){
+                console.log( "Error kWidget never ready" );
+            }
+            return ;
+        }
+        if( ! window.kWidget ){
+            setTimeout(function(){
+                waitForKWidget( callback );
+            }, 5 );
+            return ;
+        }
+        callback();
+    }
+    waitForKWidget( function(){
 
-  player.kBind("volumeChanged", event => {
-    localStorage.setItem("volumeLevel", event.newVolume);
-  });
-}
+        kWidget.addReadyCallback(playerId => {
+            let kdp = document.getElementById(playerId);
+           // kdp.kBind("playerReady", () => {
+                applyExistingSettings(kdp);
+                createListeners(kdp);
+            //});
+        });
+    });
 
-function applyExistingSettings(player) {
-  let captionLanguage = localStorage.getItem("captionLanguage");
-  if (captionLanguage) {
-    player.sendNotification("showHideClosedCaptions", captionLanguage);
-  }
+    function createListeners(player) {
+        player.kBind("changedClosedCaptions", event => {
+            event.language
+                ? localStorage.setItem("captionLanguage", event.language)
+            : localStorage.removeItem("captionLanguage");
+        });
 
-  let playbackRate = localStorage.getItem("playbackRate");
-  if (playbackRate) {
-    player.sendNotification("playbackRateChangeSpeed", playbackRate);
-  }
+        player.kBind("updatedPlaybackRate", newRate => {
+            localStorage.setItem("playbackRate", newRate);
+        });
 
-  let volumeLevel = localStorage.getItem("volumeLevel");
-  if (volumeLevel) {
-    player.sendNotification("changeVolume", volumeLevel);
-  }
-}
+        player.kBind("volumeChanged", event => {
+            localStorage.setItem("volumeLevel", event.newVolume);
+        });
+
+        player.kBind("playing", event => {
+            updateRateSpeed();
+        });
+
+        player.kBind( 'mediaReady', () => {
+            // play when ready
+            player.sendNotification("doPlay");
+        });
+    }
+
+    function updateRateSpeed() {
+        let playbackRate = localStorage.getItem("playbackRate");
+        let speedSelection = $('[title="' + playbackRate + 'x"]');
+        if (playbackRate && speedSelection) {
+            speedSelection.click();
+        }
+    }
+
+    function applyExistingSettings(player) {
+        let captionLanguage = localStorage.getItem("captionLanguage");
+        if (captionLanguage) {
+            player.sendNotification("showHideClosedCaptions", captionLanguage);
+        }
+
+        let volumeLevel = localStorage.getItem("volumeLevel");
+        if (volumeLevel) {
+            player.sendNotification("changeVolume", volumeLevel);
+        }
+    }
+})();
+
