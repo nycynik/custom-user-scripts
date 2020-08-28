@@ -64,6 +64,13 @@
             updateRateSpeed();
         });
 
+        player.kBind("playerPlayEnd", event => {
+            // when video ends go to next.
+            console.log("moving on..");
+            //var nextButton = parent.document.querySelector('#module_navigation_target > div > div.module-sequence-footer > div > span.module-sequence-footer-button--next > a');
+            //nextButton.click(); // click next button
+        });
+
         player.kBind( 'mediaReady', () => {
             // play when ready
             player.sendNotification("doPlay");
